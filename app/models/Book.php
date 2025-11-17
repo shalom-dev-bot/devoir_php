@@ -1,59 +1,44 @@
 <?php
-require_once __DIR__ . '/../../config/database.php';
+namespace App\Models;
 
-class Book {
-    private $conn;
-    private $table = 'books';
+use App\Core\Database;
+use PDO;
 
-    public $id;
-    public $title;
-    public $author;
-
-    public function __construct() {
-        $database = new Database();
-        $this->conn = $database->connect();
-    }
-
-    // Create
-    public function create() {
-        $sql = "INSERT INTO " . $this->table . " (title, author) VALUES (:title, :author)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':title', $this->title);
-        $stmt->bindParam(':author', $this->author);
-        return $stmt->execute();
-    }
-
-    // Read all
-    public function read() {
-        $sql = "SELECT * FROM " . $this->table . " ORDER BY id DESC";
-        $stmt = $this->conn->query($sql);
+class Book
+{
+    public static function all(): array
+    {
+        $stmt = Database::get()->query(
+            "SELECT b.*, u.username 
+             FROM books b 
+             JOIN users u ON b.user_id = u.id 
+             ORDER BY b.created_at DESC"
+        );
         return $stmt->fetchAll();
     }
 
-    // Read single
-    public function readSingle($id) {
-        $sql = "SELECT * FROM " . $this->table . " WHERE id = :id LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
-        return $stmt->fetch();
+    public static function create(string $title, string $author, int $userId): bool
+    {
+        $stmt = Database::get()->prepare(
+            "INSERT INTO books (title, author, user_id) VALUES (?, ?, ?)"
+        );
+        return $stmt->execute([$title, $author, $userId]);
     }
 
-    // Update
-    public function update() {
-        $sql = "UPDATE " . $this->table . " SET title = :title, author = :author WHERE id = :id";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':title', $this->title);
-        $stmt->bindParam(':author', $this->author);
-        $stmt->bindParam(':id', $this->id);
-        return $stmt->execute();
+    public static function delete(int $id, int $userId): bool
+    {
+        $stmt = Database::get()->prepare(
+            "DELETE FROM books WHERE id = ? AND user_id = ?"
+        );
+        return $stmt->execute([$id, $userId]);
     }
 
-    // Delete
-    public function delete($id) {
-        $sql = "DELETE FROM " . $this->table . " WHERE id = :id";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id', $id);
-        return $stmt->execute();
+    public static function findByUser(int $id, int $userId): ?array
+    {
+        $stmt = Database::get()->prepare(
+            "SELECT * FROM books WHERE id = ? AND user_id = ?"
+        );
+        $stmt->execute([$id, $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 }

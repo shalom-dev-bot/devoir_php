@@ -1,10 +1,12 @@
 <?php
 // config/database.php
+// Fichier de configuration de la base de données
+// NE JAMAIS le mettre dans /public → il contient des identifiants !
 
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'bibliotheque');
-define('DB_USER', 'root');        // change si tu as un autre user
-define('DB_PASS', '');            // mets ton mot de passe ici
+define('DB_USER', 'root');      // Change si tu as un autre user
+define('DB_PASS', '');          // Mets ton mot de passe MySQL ici (ou vide si aucun)
 
 try {
     $pdo = new PDO(
@@ -12,11 +14,17 @@ try {
         DB_USER,
         DB_PASS,
         [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            // Mode erreurs → exceptions (on veut tout capter)
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            
+            // On récupère toujours les résultats en tableau associatif
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
+            
+            // Désactive l'émulation des prepared statements → VRAIE sécurité contre les injections SQL
+            PDO::ATTR_EMULATE_PREPARES   => false,
         ]
-    );
+);
 } catch (PDOException $e) {
-    die("Erreur de connexion à la base de données. Contacte l'admin.");
+    // En production, on ne montre JAMAIS l'erreur brute à l'utilisateur
+    die("Erreur de connexion à la base de données. Contacte l'administrateur.");
 }

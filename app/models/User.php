@@ -1,45 +1,41 @@
 <?php
-require_once __DIR__ . '/../../config/database.php';
+namespace App\Models;
 
-class User {
-    private $conn;
-    private $table = 'users';
+use App\Core\Database;
+use PDO;
 
-    public $id;
-    public $username;
-    public $email;
-    public $password; // hashed password
-
-    public function __construct() {
-        $database = new Database();
-        $this->conn = $database->connect();
-    }
-
-    // Register new user
-    public function register() {
-        $sql = "INSERT INTO " . $this->table . " (username, email, password) VALUES (:username, :email, :password)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':username', $this->username);
-        $stmt->bindParam(':email', $this->email);
-        $stmt->bindParam(':password', $this->password); // already hashed
-        return $stmt->execute();
-    }
-
-    // Find user by email
-    public function findByEmail($email) {
-        $sql = "SELECT * FROM " . $this->table . " WHERE email = :email LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-        return $stmt->fetch();
-    }
-
-    // Verify login
-    public function login($email, $password) {
-        $user = $this->findByEmail($email);
-        if($user && password_verify($password, $user['password'])) {
-            return $user;
+class User
+{
+    // Inscription sécurisée
+    public static function register(string $username, string $password): bool
+    {
+        // 1. Vérifie si le pseudo existe déjà
+        $stmt = Database::get()->prepare("SELECT id FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        if ($stmt->fetch()) {
+            return false; // déjà pris
         }
-        return false;
+
+        // 2. Hachage du mot de passe (algorithme recommandé en 2025)
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+
+        // 3. Insertion
+        $stmt = Database::get()->prepare(
+            "INSERT INTO users (username, password) VALUES (?, ?)"
+        );
+        return $stmt->execute([$username, $hash]);
+    }
+
+    // Connexion sécurisée
+    public static function login(string $username, string $password): ?int
+    {
+        $stmt = Database::get()->prepare("SELECT id, password FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+
+        if ($user && password_verify($password, $user['password'])) {
+            return (int)$user['id']; // retourne l'ID si OK
+        }
+        return null; // mauvais identifiants
     }
 }
